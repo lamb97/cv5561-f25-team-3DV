@@ -9,3 +9,5 @@ class LightGaussian:
     prune_percent: float = 0.66
     prune_type: Literal["v_important_score"] = "v_important_score"
     v_pow: float = 0.1
+    semantic_importance_weight: float = 0.0
+    semantic_importance_vis_weight: float = 1.0
