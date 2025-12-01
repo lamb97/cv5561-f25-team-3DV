@@ -11,7 +11,7 @@ class MetricModule(torch.nn.Module):
     def setup(self, stage: str, pl_module):
         pass
 
-    def get_train_metrics(self, pl_module, gaussian_model, step: int, batch, outputs, renderer) -> Tuple[Dict[str, Any], Dict[str, bool]]:
+    def get_train_metrics(self, pl_module, gaussian_model, step: int, batch, outputs) -> Tuple[Dict[str, Any], Dict[str, bool]]:
         """
         :return:
             The first dict: contains the metric values.
@@ -25,13 +25,12 @@ class MetricModule(torch.nn.Module):
             gaussian_model=gaussian_model,
             batch=batch,
             outputs=outputs,
-            renderer=renderer,
         )
 
     def training_setup(self, pl_module) -> Tuple:
         return [], []
 
-    def get_validate_metrics(self, pl_module, gaussian_model, batch, outputs, renderer) -> Tuple[Dict[str, float], Dict[str, bool]]:
+    def get_validate_metrics(self, pl_module, gaussian_model, batch, outputs) -> Tuple[Dict[str, float], Dict[str, bool]]:
         pass
 
     def on_parameter_move(self, *args, **kwargs):

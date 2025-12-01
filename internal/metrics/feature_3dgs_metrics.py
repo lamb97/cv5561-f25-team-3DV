@@ -13,7 +13,7 @@ class Feature3DGSMetrics(Metric):
 
 
 class Feature3DGSMetricImpl(MetricImpl):
-    def get_validate_metrics(self, pl_module, gaussian_model, batch, outputs) -> Tuple[Dict[str, float], Dict[str, bool]]:
+    def get_validate_metrics(self, pl_module, gaussian_model, batch, outputs, renderer) -> Tuple[Dict[str, float], Dict[str, bool]]:
         metrics = {}
         metrics_pbar = {}
 

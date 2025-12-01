@@ -369,8 +369,8 @@ class GaussianSplatting(LightningModule):
         outputs = self(camera)
         # output processors
         self.output_processor.training_forward(batch, outputs)
-        # metrics
-        metrics, prog_bar = self.metric.get_train_metrics(self, self.gaussian_model, global_step, batch, outputs)
+        # Semantic consistency loss
+        metrics, prog_bar = self.metric.get_train_metrics(self, self.gaussian_model, global_step, batch, outputs, self.renderer)
         self.log_metrics(metrics, prog_bar, prefix="train", on_step=True, on_epoch=False)
 
         for i in self.extra_train_metrics:
@@ -417,7 +417,7 @@ class GaussianSplatting(LightningModule):
             self.renderer.update_semantic_importance(global_step, self.gaussian_model)
         # invoke other hooks
         for i in self.on_after_backward_hooks:
-            i(outputs, batch, self.gaussian_model, global_step, self)
+            i(outputs, batch, self.gaussian_model, global_step, self, self.renderer)
 
         # optimize
         for optimizer in optimizers:
@@ -529,7 +529,7 @@ class GaussianSplatting(LightningModule):
 
         # forward
         outputs = self(camera)
-        metrics, prog_bar = self.metric.get_validate_metrics(self, self.gaussian_model, batch, outputs)
+        metrics, prog_bar = self.metric.get_validate_metrics(self, self.gaussian_model, batch, outputs, self.renderer)
         self.log_metrics(metrics, prog_bar, prefix=name, on_step=False, on_epoch=True)
         self.val_metrics.append((image_info[0], metrics))
 
