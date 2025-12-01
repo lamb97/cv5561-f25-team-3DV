@@ -1,0 +1,13 @@
+max_steps: 6000  # prune once at step 1, then short finetune without densify
+model:
+  renderer: internal.renderers.gsplat_renderer.GSPlatRenderer
+  density: internal.density_controllers.static_density_controller.StaticDensityController
+  light_gaussian:
+    prune_steps:
+      - 1         # prune immediately after loading
+    prune_percent: 0.5
+    prune_decay: 1.0
+    v_pow: 0.1
+    semantic_importance_weight: 1.0
+    semantic_importance_vis_weight: 1.0
+# Other optimizer/scheduler defaults follow base configs.
