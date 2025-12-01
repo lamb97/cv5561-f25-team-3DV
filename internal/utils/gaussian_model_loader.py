@@ -106,6 +106,13 @@ class GaussianModelLoader:
 
         model.setup_from_number(model_state_dict["gaussians.means"].shape[0])
         model.to(device)
+        # backward compatibility: fill missing semantic_grad_ema
+        if "gaussians.semantic_grad_ema" not in model_state_dict:
+            model_state_dict["gaussians.semantic_grad_ema"] = torch.zeros(
+                model_state_dict["gaussians.means"].shape[0],
+                device=device,
+                dtype=torch.float32,
+            )
         model.load_state_dict(model_state_dict)
 
         return model
