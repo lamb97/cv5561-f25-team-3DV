@@ -412,6 +412,9 @@ class GaussianSplatting(LightningModule):
             global_step=global_step,
             pl_module=self,
         )
+        # update semantic gradient EMA if renderer supports it (feature distillation)
+        if hasattr(self.renderer, "update_semantic_importance"):
+            self.renderer.update_semantic_importance(global_step, self.gaussian_model)
         # invoke other hooks
         for i in self.on_after_backward_hooks:
             i(outputs, batch, self.gaussian_model, global_step, self)
@@ -453,11 +456,30 @@ class GaussianSplatting(LightningModule):
                 score,
                 self.light_gaussian_hparams.v_pow,
             )
+            final_score = v_list
+            # blend semantic importance if available and enabled
+            try:
+                sem_w = getattr(self.renderer, "semantic_importance_weight", 0.0)
+                vis_w = getattr(self.renderer, "semantic_importance_vis_weight", 1.0)
+                if sem_w == 0 and hasattr(self.light_gaussian_hparams, "semantic_importance_weight"):
+                    sem_w = getattr(self.light_gaussian_hparams, "semantic_importance_weight", 0.0)
+                if hasattr(self.light_gaussian_hparams, "semantic_importance_vis_weight"):
+                    vis_w = getattr(self.light_gaussian_hparams, "semantic_importance_vis_weight", vis_w)
+                sem_ema = None
+                if hasattr(self.gaussian_model, "gaussians"):
+                    sem_ema = self.gaussian_model.gaussians.get("semantic_grad_ema", None)
+                if sem_ema is not None and sem_w > 0:
+                    sem_norm = sem_ema / (sem_ema.max() + 1e-9)
+                    vis_norm = v_list / (v_list.max() + 1e-9)
+                    final_score = vis_w * vis_norm + sem_w * sem_norm
+            except Exception:
+                # keep original score on any unexpected issue
+                final_score = v_list
 
             # TODO: `self.light_gaussian_hparams.prune_steps` should be sorted
             prune_step_index = self.light_gaussian_hparams.prune_steps.index(global_step)
             prune_percent = self.light_gaussian_hparams.prune_percent * (self.light_gaussian_hparams.prune_decay ** prune_step_index)
-            prune_mask = get_prune_mask(prune_percent, v_list)
+            prune_mask = get_prune_mask(prune_percent, final_score)
 
             print(f"number_of_gaussian={self.gaussian_model.get_xyz.shape[0]}, "
                   f"number_to_prune={prune_mask.sum().item()}, "
@@ -468,6 +490,10 @@ class GaussianSplatting(LightningModule):
             valid_points_mask = ~prune_mask  # `True` to keep
             self.gaussian_model.properties = Utils.prune_properties(valid_points_mask, self.gaussian_model, self.gaussian_optimizers)
             self.density_updated_by_renderer()
+
+            if hasattr(self.renderer, "prune_feature_parameters"):
+                renderer_opts = getattr(self, "renderer_optimizers", None)
+                self.renderer.prune_feature_parameters(valid_points_mask, renderer_opts)
 
             print(f"number_of_gaussian_after_pruning={self.gaussian_model.get_xyz.shape[0]}")
 
@@ -682,6 +708,9 @@ class GaussianSplatting(LightningModule):
 
         # renderer optimizer and scheduler setup
         renderer_optimizer, renderer_scheduler = self.renderer.training_setup(self)
+        self.renderer_optimizers = renderer_optimizer
+        if isinstance(self.renderer_optimizers, list) is False and self.renderer_optimizers is not None:
+            self.renderer_optimizers = [self.renderer_optimizers]
         add_optimizers_and_schedulers(renderer_optimizer, renderer_scheduler)
 
         # metric optimizer and scheduler setup
