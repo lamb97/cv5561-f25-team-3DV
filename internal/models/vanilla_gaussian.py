@@ -86,7 +86,7 @@ class VanillaGaussianModel(
         self.register_buffer("_active_sh_degree", torch.tensor(0, dtype=torch.uint8), persistent=True)
 
     def get_extra_property_names(self):
-        return []
+        return ["semantic_grad_ema"]
 
     def before_setup_set_properties_from_pcd(self, xyz: torch.Tensor, rgb: torch.Tensor, property_dict: Dict[str, torch.Tensor], *args, **kwargs):
         pass
@@ -128,6 +128,7 @@ class VanillaGaussianModel(
 
         # opacities
         opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float))
+        semantic_grad_ema = torch.zeros((n_gaussians,), dtype=torch.float32)
 
         means = nn.Parameter(fused_point_cloud.requires_grad_(True))
         shs_dc = nn.Parameter(shs[:, :, 0:1].transpose(1, 2).contiguous().requires_grad_(True))
@@ -137,6 +138,7 @@ class VanillaGaussianModel(
         scales = nn.Parameter(scales.requires_grad_(True))
         rotations = nn.Parameter(rots.requires_grad_(True))
         opacities = nn.Parameter(opacities.requires_grad_(True))
+        semantic_grad_ema = nn.Parameter(semantic_grad_ema.requires_grad_(False))
 
         property_dict = {
             "means": means,
@@ -145,6 +147,7 @@ class VanillaGaussianModel(
             "scales": scales,
             "rotations": rotations,
             "opacities": opacities,
+            "semantic_grad_ema": semantic_grad_ema,
         }
         self.before_setup_set_properties_from_pcd(xyz, rgb, property_dict, *args, **kwargs)
         self.set_properties(property_dict)
@@ -162,6 +165,7 @@ class VanillaGaussianModel(
         scales = torch.zeros((n, 3))
         rotations = torch.zeros((n, 4))
         opacities = torch.zeros((n, 1))
+        semantic_grad_ema = torch.zeros((n,), dtype=torch.float32)
 
         means = nn.Parameter(means.requires_grad_(True))
         shs_dc = nn.Parameter(shs_dc.requires_grad_(True))
@@ -169,6 +173,7 @@ class VanillaGaussianModel(
         scales = nn.Parameter(scales.requires_grad_(True))
         rotations = nn.Parameter(rotations.requires_grad_(True))
         opacities = nn.Parameter(opacities.requires_grad_(True))
+        semantic_grad_ema = nn.Parameter(semantic_grad_ema.requires_grad_(False))
 
         property_dict = {
             "means": means,
@@ -177,6 +182,7 @@ class VanillaGaussianModel(
             "scales": scales,
             "rotations": rotations,
             "opacities": opacities,
+            "semantic_grad_ema": semantic_grad_ema,
         }
         self.before_setup_set_properties_from_number(n, property_dict, *args, **kwargs)
         self.set_properties(property_dict)
