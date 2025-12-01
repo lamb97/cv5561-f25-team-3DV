@@ -36,6 +36,11 @@ class Feature3DGSRenderer(Renderer):
             feature_lr: float = 0.001,
             feature_decoder_lr: float = 0.0001,
             rasterize_batch: int = 32,
+            semantic_importance_enable: bool = False,
+            semantic_importance_beta: float = 0.99,
+            semantic_importance_warmup: int = 0,
+            semantic_importance_weight: float = 0.0,
+            semantic_importance_vis_weight: float = 1.0,
     ):
         super().__init__()
         self.speedup = speedup
@@ -43,6 +48,11 @@ class Feature3DGSRenderer(Renderer):
         self.feature_lr = feature_lr
         self.feature_decoder_lr = feature_decoder_lr
         self.rasterize_batch = rasterize_batch
+        self.semantic_importance_enable = semantic_importance_enable
+        self.semantic_importance_beta = semantic_importance_beta
+        self.semantic_importance_warmup = semantic_importance_warmup
+        self.semantic_importance_weight = semantic_importance_weight
+        self.semantic_importance_vis_weight = semantic_importance_vis_weight
 
         # update this when feature updated
         self.pca_projected_color = None
@@ -195,6 +205,66 @@ class Feature3DGSRenderer(Renderer):
 
         return outputs
 
+    def prune_feature_parameters(self, valid_points_mask: torch.Tensor, optimizers=None):
+        """
+        Align feature parameters with pruned Gaussians.
+        `valid_points_mask` uses True to keep. Only the 'features' param group is pruned.
+        """
+        if optimizers is None:
+            return
+
+        valid_points_mask = valid_points_mask.to(self.features.device)
+        new_feature_param = None
+
+        for opt in optimizers:
+            if opt is None:
+                continue
+            for group in opt.param_groups:
+                if group.get("name", None) != "features":
+                    continue
+
+                old_param = group["params"][0]
+                stored_state = opt.state.get(old_param, None)
+                if stored_state is not None:
+                    stored_state["exp_avg"] = stored_state["exp_avg"][valid_points_mask]
+                    stored_state["exp_avg_sq"] = stored_state["exp_avg_sq"][valid_points_mask]
+                    del opt.state[old_param]
+
+                new_param = torch.nn.Parameter(old_param[valid_points_mask].detach().requires_grad_(True))
+                group["params"][0] = new_param
+                if stored_state is not None:
+                    opt.state[new_param] = stored_state
+
+                new_feature_param = new_param
+
+        if new_feature_param is not None:
+            self.features = new_feature_param
+            if getattr(self, "edit_mask", None) is not None:
+                self.edit_mask = self.edit_mask[valid_points_mask]
+            # drop cached visualizations so they are recomputed for the new set
+            self.pca_projected_color = None
+
+    def update_semantic_importance(self, global_step: int, gaussian_model: GaussianModel):
+        """
+        Update per-Gaussian semantic gradient EMA using current feature gradients.
+        """
+        if self.semantic_importance_enable is False:
+            return
+        if global_step < self.semantic_importance_warmup:
+            return
+        if self.features.grad is None:
+            return
+        if not hasattr(gaussian_model, "gaussians"):
+            return
+        sem_ema = gaussian_model.gaussians.get("semantic_grad_ema", None)
+        if sem_ema is None:
+            return
+
+        with torch.no_grad():
+            grad_norm = torch.norm(self.features.grad, dim=-1)
+            beta = self.semantic_importance_beta
+            sem_ema.mul_(beta).add_(grad_norm * (1.0 - beta))
+
     def training_forward(self, step: int, module: lightning.LightningModule, viewpoint_camera: Camera, pc: GaussianModel, bg_color: torch.Tensor, scaling_modifier=1.0, render_types: list = None, **kwargs):
         return self(
             viewpoint_camera=viewpoint_camera,
@@ -299,7 +369,7 @@ class ViewerOptions:
                 self.server.gui.add_markdown("No option for SAM")
 
     def _setup_lseg_options(self):
-        objects = ["car", "tree", "building", "sidewalk", "road"]
+        objects = ["clock", "table", "ceiling", "wall", "floor","light","chair","bench"]
         clip_editor = self._get_clip_editor()
         text_feature = clip_editor.encode_text([obj.replace("_", " ") for obj in objects])
         del clip_editor
