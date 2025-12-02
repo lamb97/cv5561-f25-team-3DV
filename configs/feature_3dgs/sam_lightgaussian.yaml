@@ -1,0 +1,17 @@
+max_steps: 12000
+model:
+  renderer:
+    class_path: internal.renderers.feature_3dgs_renderer.Feature3DGSRenderer
+    init_args:
+      speedup: false
+      n_feature_dims: 256
+  metric: internal.metrics.feature_3dgs_metrics.Feature3DGSMetrics
+  density: internal.density_controllers.static_density_controller.StaticDensityController
+  light_gaussian:
+    prune_steps:
+      - 9000        # prune once, then continue feature distillation
+    prune_percent: 0.66
+    prune_decay: 1.0
+    v_pow: 0.1
+data:
+  parser: Feature3DGSColmap
