@@ -79,7 +79,7 @@ class VanillaMetricsImpl(MetricImpl):
             "ssim": True,
         }
 
-    def get_train_metrics(self, pl_module, gaussian_model, step: int, batch, outputs) -> Tuple[Dict[str, Any], Dict[str, bool]]:
+    def get_train_metrics(self, pl_module, gaussian_model, step: int, batch, outputs, renderer) -> Tuple[Dict[str, Any], Dict[str, bool]]:
         return self._get_basic_metrics(
             pl_module=pl_module,
             gaussian_model=gaussian_model,
@@ -87,7 +87,7 @@ class VanillaMetricsImpl(MetricImpl):
             outputs=outputs,
         )
 
-    def get_validate_metrics(self, pl_module, gaussian_model, batch, outputs) -> Tuple[Dict[str, Any], Dict[str, bool]]:
+    def get_validate_metrics(self, pl_module, gaussian_model, batch, outputs, renderer) -> Tuple[Dict[str, Any], Dict[str, bool]]:
         metrics, prog_bar = self._get_basic_metrics(pl_module, gaussian_model, batch, outputs)
 
         camera, image_info, _ = batch
