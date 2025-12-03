@@ -1,3 +1,4 @@
+logger: wandb
 max_steps: 6000  # short finetune after pruning
 model:
   renderer: internal.renderers.gsplat_renderer.GSPlatRenderer
@@ -10,3 +11,11 @@ model:
     semantic_importance_weight: 1.0
     semantic_importance_vis_weight: 1.0
 # keep other defaults from base configs (lr, schedulers, etc.)
+data:
+  parser:
+    class_path: Feature3DGSColmap
+    init_args:
+      split_mode: experiment
+      feature_dir: "rgb_feature_langseg"
+      filename_suffix: "_fmap_CxHxW"
+      filename_include_image_ext: false

@@ -1,24 +1,14 @@
 logger: wandb
-max_steps: 12000
+max_steps: 6000
 model:
+  save_val_output: true
   renderer:
     class_path: internal.renderers.feature_3dgs_renderer.Feature3DGSRenderer
     init_args:
       speedup: true
-      n_feature_dims: 512           # LSeg feature dims, speedup halves internal rendering dims
-      semantic_importance_enable: true
-      semantic_importance_beta: 0.99
-      semantic_importance_warmup: 1000
-      semantic_importance_weight: 1.0
-      semantic_importance_vis_weight: 1.0
+      n_feature_dims: 512
   metric: internal.metrics.semantic_feature_similarity_reg.Feature3DGSMetricsWithSimilarityRegularization
   density: internal.density_controllers.static_density_controller.StaticDensityController
-  light_gaussian:
-    prune_steps:
-      - 9000
-    prune_percent: 0.66
-    prune_decay: 1.0
-    v_pow: 0.1
 data:
   parser:
     class_path: Feature3DGSColmap
