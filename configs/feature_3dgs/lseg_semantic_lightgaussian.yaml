@@ -10,7 +10,7 @@ model:
       semantic_importance_warmup: 1000
       semantic_importance_weight: 1.0
       semantic_importance_vis_weight: 1.0
-  metric: internal.metrics.feature_3dgs_metrics.Feature3DGSMetrics
+  metric: internal.metrics.semantic_feature_similarity_reg.Feature3DGSMetricsWithSimilarityRegularization
   density: internal.density_controllers.static_density_controller.StaticDensityController
   light_gaussian:
     prune_steps:
@@ -22,6 +22,7 @@ data:
   parser:
     class_path: Feature3DGSColmap
     init_args:
+      split_mode: experiment_splits
       feature_dir: "rgb_feature_langseg"
       filename_suffix: "_fmap_CxHxW"
       filename_include_image_ext: false
