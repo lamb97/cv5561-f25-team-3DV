@@ -1,3 +1,0 @@
-model:
-  metric:
-    lpips_net_type: vgg
