@@ -31,6 +31,11 @@ pip install -r requirements/sam.txt
 
 ---
 
+## Download link: Self-collected dataset (Gopher, LindHall)
+```
+https://drive.google.com/file/d/1pkr357934yOmhdkktGvJZ_XErQbvk0PE/view?usp=sharing
+```
+
 ## Running the Code
 1. First, using the vggt submodule, extract the initial 3D point cloud and camera parameters from the dataset in COLMAP format.
 2. Second, please refer to the Installation section above to install our framework’s dependencies.
