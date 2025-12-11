@@ -4,3 +4,6 @@
 [submodule "third_party/feature-3dgs"]
 	path = third_party/feature-3dgs
 	url = https://github.com/ShijieZhou-UCLA/feature-3dgs.git
+[submodule "feature-3dgs"]
+	path = feature-3dgs
+	url = https://github.com/ShijieZhou-UCLA/feature-3dgs.git
