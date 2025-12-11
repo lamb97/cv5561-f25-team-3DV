@@ -369,7 +369,7 @@ class ViewerOptions:
                 self.server.gui.add_markdown("No option for SAM")
 
     def _setup_lseg_options(self):
-        objects = ["clock", "table", "ceiling", "wall", "floor","light","chair","bench", "notebook", "drink", "human", "tree", "statue"]
+        objects = ["clock", "table", "ceiling", "wall", "floor","light","chair","bench", "notebook", "drink", "person", "tree", "statue"]
         clip_editor = self._get_clip_editor()
         text_feature = clip_editor.encode_text([obj.replace("_", " ") for obj in objects])
         del clip_editor

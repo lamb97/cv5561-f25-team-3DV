@@ -165,6 +165,7 @@ class GaussianSplatting(LightningModule):
         self.gaussian_model = gaussian_model
 
         print(f"initialize from {load_from}: sh_degree={self.gaussian_model.max_sh_degree}")
+        print(gaussian_model.get_xyz.shape[0])
 
     def setup(self, stage: str):
         if stage == "fit":
@@ -176,6 +177,8 @@ class GaussianSplatting(LightningModule):
             if self.hparams["save_val_metrics"] is None:
                 self.hparams["save_val_metrics"] = True
 
+        # self._initialize_gaussians_from_trained_model() // Active this line for second semantic optimization
+        
         self.store.setup(stage=stage, pl_module=self)
         self.renderer.setup(stage=stage, lightning_module=self)
         self.metric.setup(stage=stage, pl_module=self)
@@ -528,7 +531,17 @@ class GaussianSplatting(LightningModule):
         gt_image = image_info[1]
 
         # forward
+        import time
+        start = time.perf_counter()
         outputs = self(camera)
+        end = time.perf_counter()
+        
+        elapsed = end - start      # seconds
+        fps = 1.0 / elapsed
+
+        print(f"Inference time: {elapsed:.6f} sec")
+        print(f"FPS: {fps:.2f}")
+        
         metrics, prog_bar = self.metric.get_validate_metrics(self, self.gaussian_model, batch, outputs, self.renderer)
         self.log_metrics(metrics, prog_bar, prefix=name, on_step=False, on_epoch=True)
         self.val_metrics.append((image_info[0], metrics))
@@ -547,7 +560,7 @@ class GaussianSplatting(LightningModule):
                 output_images.append(outputs["extra_image"].cpu())
             self.image_queue.put({
                 "output_images": output_images,
-                "gt_image": gt_image.cpu(),
+                # "gt_image": gt_image.cpu(),
                 "stage": name,
                 "image_name": image_info[0],
                 "epoch": max(self.trainer.current_epoch, self.restored_epoch),
@@ -641,7 +654,8 @@ class GaussianSplatting(LightningModule):
                 break
 
             try:
-                image_list = [item["gt_image"]]
+                # image_list = [item["gt_image"]]
+                image_list = []
                 for i in item["output_images"]:
                     if i.shape[0] == 1:
                         i = i.repeat(3, 1, 1)
